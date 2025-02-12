@@ -147,12 +147,57 @@ def print_test_page(printer_name):
     finally:
         os.remove(test_file)  # Eliminar archivo temporal después de imprimir
 
+def start_printer(printer_name):
+
+    if system == "windows":
+        print("Luego")
+
+    else:
+
+        try:
+            conn = cups.Connection()
+            conn.enablePrinter(printer_name)
+            print(cc(f"Impresora habilitada correctamente", "v"))
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
+def stop_printer(printer_name):
+
+    if system == "windows":
+        print("Luego")
+
+    else:
+        try:
+            conn = cups.Connection()
+            conn.disablePrinter(printer_name)
+            print(cc(f"Impresora deshabilitada correctamente", "v"))
+            
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
+def remove_printer(printer_name):
+
+    if system == "windows":
+        print("Luego")
+
+    else:
+        try:
+            conn = cups.Connection()
+            conn.deletePrinter(printer_name)
+            print(cc(f"Impresora deshabilitada correctamente", "v"))
+            
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
 def manage_printers_submenu(printer_name):
     """Menú de administración de la impresora."""
     print(cc("\nOpciones para la impresora seleccionada", color))
     print(cc("1. Hacerla predeterminada", color))
     print(cc("2. Imprimir página de prueba", color))
-    print(cc("3. Cancelar", color))
+    print(cc("3. Iniciar impresora", color))
+    print(cc("4. Pausar impresora", color))
+    print(cc("5. Eliminar impresora", color))
+    print(cc("6. Cancelar", color))
 
     try:
         option = int(input("Selecciona una opción: "))
@@ -162,6 +207,12 @@ def manage_printers_submenu(printer_name):
         elif option == 2:
             print_test_page(printer_name)
         elif option == 3:
+            start_printer(printer_name)
+        elif option == 4:
+            stop_printer(printer_name)
+        elif option == 5:
+            remove_printer(printer_name)
+        elif option == 6:
             print("Operación cancelada.")
         else:
             print("Opción no válida.")
@@ -175,27 +226,103 @@ def list_queue():
         printer_name = win32print.GetDefaultPrinter()
         handle = win32print.OpenPrinter(printer_name)
         jobs = win32print.EnumJobs(handle, 0, 10, 1)
-        for job in jobs:
-            print(f"Job ID: {job['JobId']}, Estado: {job['Status']}, Usuario: {job['UserName']}, Documento: {job['pDocument']}")
+        if len(jobs) == 0:
+            return "empty"
+        else:
+            for job in jobs:
+                print(f"Job ID: {job['JobId']}, Estado: {job['Status']}, Usuario: {job['UserName']}, Documento: {job['pDocument']}")
     
     else:
+        try: 
+            conn = cups.Connection()
+            jobs = conn.getJobs()
+
+            if len(jobs) == 0:
+                return "empty"
+            else: 
+                for job_id, job in jobs.items():
+                    print(f"Job ID: {job_id}")
+                    print(f"Usuario: {job.get('job-originating-user-name', 'Desconocido')}")
+                    print(f"Nombre del trabajo: {job.get('title', 'Sin nombre')}")
+                    print(f"Estado del trabajo: {job.get('job-state', 'Desconocido')}")
+                    print(f"Impresora: {job.get('printer-uri', 'Desconocida')}")
+                    print(f"Fecha: {job.get('time-at-creation', 'Desconocida')}")
+                    print("---" * 40)
+
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
+def start_job(job_id):
+
+    if system == "windows":
+        print("Por implementar")
+    else:
         conn = cups.Connection()
-        jobs = conn.getJobs()
+        try:
+            conn.restartJob(job_id)
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
 
-        for job_id, job in jobs.items():
-            print(f"Job ID: {job_id}")
-            # Obtener atributos por trabajo
-            att = conn.getJobAttributes(job_id)
+def cancel_job(job_id):
 
-            # Datos por trabajo
-            user_job = att.get("job-originating-user-name", "Desonocido")
-            name_job = att.get("job-name", "Sin nombre")
-            status_job = att.get("job-status", "Desconocido")
-            printer_job = att.get("job-printer-uri", "Desconocida")
-            date_job = att.get("time-at-creation", "Desconocido")
-            
-            print(f"Usuario: {user_job}\n Nombre del trabajo: {name_job}\n Estado del trabajo: {status_job}\n Impresora: {printer_job}\n Fecha: {date_job}")
-            print("---" * 20)
+    if system == "windows":
+        print("Por implementar")
+    else:
+        conn = cups.Connection()
+        try:
+            conn.cancelJob(job_id)
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
+def cancel_all_jobs():
+
+    if system == "windows":
+        print("Por implementar")
+    else:
+        conn = cups.Connection()
+        try:
+            conn.cancelAllJobs()
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
+def move_job_to_first_place(job_id, printer_name):
+
+    if system == "windows":
+        print("Por implementar")
+    else:
+        conn = cups.Connection()
+        # Obtener información del trabajo antes de cancelarlo
+        job_info = conn.getJobAttributes(job_id)
+        file_path = job_info['file']
+        try:
+            conn.cancelJob(job_id)
+            add_job(printer_name, file_path, f"Trabajo {job_id} reenviado a el principio de la cola")
+        except Exception as e:
+            print(cc(f"Error: {e}", "r"))
+
+def manage_job_list_submenu(job_id, mainprinter):
+    """ Submenú para trabajar con la cola de impresión """
+    print(cc("\nOpciones para el trabajo seleccionado", color))
+    print(cc("1. Reanudar trabajo", color))
+    print(cc("2. Cancelar trabajo", color))
+    print(cc("3. Cancelar todos los trabajos", color))
+    print(cc("4. Mover trabajo al principio de la cola", color))
+    print(cc("5. Cancelar", color))
+
+    option = input(cc("Introduce una opción: ", color))
+
+    if option == "1":
+        start_job(job_id)
+    elif option == "2":
+        cancel_job(job_id)
+    elif option == "3":
+        cancel_all_jobs()
+    elif option == "4":
+        move_job_to_first_place(job_id, mainprinter)
+    elif option == "5":
+        return
+    else:
+        print(cc("Opción no válida", "r"))
 # ------------------------- FUNCIONES PARA IMPRESIÓN DE ARCHIVOS -------------------------
 
 def select_archive():
@@ -227,4 +354,3 @@ def print_document(defprinter, archivo):
         # Enviar el archivo PDF a la impresora utilizando lp
         subprocess.run(['lp', '-d', defprinter, archivo], capture_output=True, text=True)
         print("Archivo enviado a la impresora en Linux.")
-    
