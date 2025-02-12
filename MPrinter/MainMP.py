@@ -22,20 +22,15 @@ def options():
     
     print(cc("\n1. Administrar impresoras", color))
     print(cc("2. Gestionar trabajos de impresión", color))
-    print(cc("3. Imprimir archivos", color))
-    print(cc("Exit para salir y clear para limpiar la pantalla", color))
+    print(cc("3. Imprimir archivos\n", color))
+    print(cc("Exit para salir y clear para limpiar la pantalla\n", color))
 
 
 # Menú principal
 def main_menu():
-    if system == "windows":
-        print(cc(mp_main, color))
-        print(cc(f"Sistema en uso: {cc(system, "g")}", color))
-        print(cc(f"Impresora principal: {cc(mainprinter, "g")}", color))
-    else:
-        print(cc(mp_main, color))
-        print(cc(f"Sistema en uso: {cc(system, "g")}", color))
-        print(cc(f"Impresora principal: {cc(mainprinter, "g")}", color))
+    print(cc(mp_main, color))
+    print(cc(f"Sistema en uso: {cc(system, "g")}", color))
+    print(cc(f"Impresora principal: {cc(mainprinter, "g")}", color))
    
 
 if __name__ == "__main__":
@@ -46,7 +41,7 @@ if __name__ == "__main__":
             main_menu()
             options()
 
-            option = input(cc("Introduce una opción (1-4): ", color))
+            option = input(cc("Introduce una opción (1-3): ", color))
 
             if option == "1":
                 print(cc("\nADMINISTRACIÓN DE IMPRESORAS\n", color))
@@ -54,9 +49,14 @@ if __name__ == "__main__":
                 manage_printers_submenu(selectprinter)
 
             elif option == "2":
-                print(cc("\nGESTIONAR TRABAJOS DE IMPRESIÓN\n", color))
-                list_queue()
-                
+                print(cc("\nGESTIONAR COLA DE IMPRESIÓN", color))
+                empty = list_queue()
+                if empty == "empty":
+                    print(cc("No hay trabajos para administrar", color))
+                else:
+                    jobid = int(input("Introduce el trabajo que deseas administrar: "))
+                    manage_job_list_submenu(jobid, mainprinter)
+
 
             elif option == "3":
                 print(cc("\nIMPRIMIR ARCHIVOS\n", color))
