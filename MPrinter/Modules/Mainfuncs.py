@@ -2,7 +2,6 @@
 import os
 from Interface.ascii import stewie
 from colorama import Fore, init
-from tabulate import tabulate
 import subprocess
 import tempfile
 import tkinter as tk
@@ -174,17 +173,29 @@ def manage_printers_submenu(printer_name):
 def list_queue():
     if system == "windows":
         printer_name = win32print.GetDefaultPrinter()
-        hprinter = win32print.OpenPrinter(printer_name)
-        jobs = win32print.EnumJobs(hprinter, 0, -1, 1)
-        win32print.ClosePrinter(hprinter)
-        return [{"Job ID": job["JobId"], "Document": job["Document"], "Status": job["Status"]} for job in jobs]
+        handle = win32print.OpenPrinter(printer_name)
+        jobs = win32print.EnumJobs(handle, 0, 10, 1)
+        for job in jobs:
+            print(f"Job ID: {job['JobId']}, Estado: {job['Status']}, Usuario: {job['UserName']}, Documento: {job['pDocument']}")
     
     else:
         conn = cups.Connection()
         jobs = conn.getJobs()
-        return [{"Job ID": job, "Title": jobs[job]["title"], "Status": jobs[job]["job-state"]} for job in jobs]
 
+        for job_id, job in jobs.items():
+            print(f"Job ID: {job_id}")
+            # Obtener atributos por trabajo
+            att = conn.getJobAttributes(job_id)
 
+            # Datos por trabajo
+            user_job = att.get("job-originating-user-name", "Desonocido")
+            name_job = att.get("job-name", "Sin nombre")
+            status_job = att.get("job-status", "Desconocido")
+            printer_job = att.get("job-printer-uri", "Desconocida")
+            date_job = att.get("time-at-creation", "Desconocido")
+            
+            print(f"Usuario: {user_job}\n Nombre del trabajo: {name_job}\n Estado del trabajo: {status_job}\n Impresora: {printer_job}\n Fecha: {date_job}")
+            print("---" * 20)
 # ------------------------- FUNCIONES PARA IMPRESIÓN DE ARCHIVOS -------------------------
 
 def select_archive():
