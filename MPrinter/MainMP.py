@@ -4,7 +4,6 @@ from Modules.Mainfuncs import *
 
 # Obtener datos de funciones 
 system = getos() # Sistema
-mainprinter = mainprint() # Impresora principal
  
 # Variable menu
 option = "0"
@@ -30,7 +29,7 @@ def options():
 def main_menu():
     print(cc(mp_main, color))
     print(cc(f"Sistema en uso: {cc(system, "g")}", color))
-    print(cc(f"Impresora principal: {cc(mainprinter, "g")}", color))
+    print(cc(f"Impresora principal: {cc(mainprint(), "g")}", color))
    
 
 if __name__ == "__main__":
