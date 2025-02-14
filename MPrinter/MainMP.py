@@ -74,8 +74,7 @@ if __name__ == "__main__":
                 print(cc("\nOpción no válida", "r"))
 
     except KeyboardInterrupt:
-        print("Byee !!")        
-
+        print(cc("\nByeee !!", "v"))
     
     
         
