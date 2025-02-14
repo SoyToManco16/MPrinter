@@ -30,6 +30,7 @@ if system == "windows":
     try:
         import win32print
         import win32api
+        import wmi
         color = "c"
     except ImportError:
         win32print = None
@@ -87,22 +88,37 @@ def list_printers():
     # Detectar sistema operativo y obtener lista de impresoras
     if system == "windows":
         printers = win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS)
-        printers_list = [printer[2] for printer in printers]
+        printers_list = []
+        
+        # Obtener estado de cada impresora
+        for printer in printers:
+            printer_name = printer[2]
+            handle = win32print.OpenPrinter(printer_name)
+            printer_info = win32print.GetPrinter(handle, 2)  # Nivel 2 para obtener información detallada
+            status = printer_info.get('Status', 'Desconocido')
+            printers_list.append((printer_name, status))
     else:
-        result = subprocess.run(['lpstat', '-a'], capture_output=True, text=True)
-        printers_list = [line.split()[0] for line in result.stdout.splitlines()]
+        result = subprocess.run(['lpstat', '-p'], capture_output=True, text=True)
+        printers_list = []
+        
+        # Obtener el estado de las impresoras en sistemas Unix
+        for line in result.stdout.splitlines():
+            parts = line.split(' ', 1)
+            printer_name = parts[0]
+            status = parts[1] if len(parts) > 1 else 'Desconocido'
+            printers_list.append((printer_name, status))
     
-    # Mostrar la lista de impresoras
+    # Mostrar la lista de impresoras con su estado
     print(cc("IMPRESORAS DISPONIBLES", color))
-    for idx, printer in enumerate(printers_list, start=1):
-        print(f"{idx}. {printer}")
+    for idx, (printer, status) in enumerate(printers_list, start=1):
+        print(f"{idx}. {printer} - Estado: {status}")
 
     # Solicitar al usuario que seleccione una impresora
     option = input(cc("Seleccione una impresora (número): ", color))
     try:
         option_num = int(option)
         if 1 <= option_num <= len(printers_list):
-            selected_printer = printers_list[option_num - 1]
+            selected_printer, _ = printers_list[option_num - 1]
             print(f"Seleccionaste: {selected_printer}")
             return selected_printer
         else:
@@ -150,10 +166,9 @@ def print_test_page(printer_name):
 def start_printer(printer_name):
 
     if system == "windows":
-        print("Luego")
+        print(cc(f"Función no disponible para Windows", "y"))
 
     else:
-
         try:
             conn = cups.Connection()
             conn.enablePrinter(printer_name)
@@ -164,7 +179,7 @@ def start_printer(printer_name):
 def stop_printer(printer_name):
 
     if system == "windows":
-        print("Luego")
+        print(cc(f"Función no disponible para Windows", "y"))
 
     else:
         try:
@@ -178,7 +193,7 @@ def stop_printer(printer_name):
 def remove_printer(printer_name):
 
     if system == "windows":
-        print("Luego")
+        print(cc("Función no disponible para Windows", "y"))
 
     else:
         try:
@@ -193,9 +208,12 @@ def manage_printers_submenu(printer_name):
     """Menú de administración de la impresora."""
     print(cc("\nOpciones para la impresora seleccionada", color))
     print(cc("1. Hacerla predeterminada", color))
-    print(cc("2. Imprimir página de prueba", color))
-    print(cc("3. Iniciar impresora", color))
-    print(cc("4. Pausar impresora", color))
+    print(cc("2. Imprimir página de prueba", color))  
+    
+    if system != "windows":
+        print(cc("3. Iniciar impresora", color))
+        print(cc("4. Pausar impresora", color))
+
     print(cc("5. Eliminar impresora", color))
     print(cc("6. Cancelar", color))
 
@@ -253,52 +271,77 @@ def list_queue():
             print(cc(f"Error: {e}", "r"))
 
 def start_job(job_id):
-
     if system == "windows":
-        print("Por implementar")
+        # Reanudar el trabajo de impresión usando PowerShell
+        try:
+            command = f"powershell Resume-PrintJob -JobId {job_id}"
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error al reanudar el trabajo {job_id}: {e}")
     else:
         conn = cups.Connection()
         try:
             conn.restartJob(job_id)
         except Exception as e:
-            print(cc(f"Error: {e}", "r"))
+            print(f"Error al reiniciar el trabajo {job_id}: {e}")
 
 def cancel_job(job_id):
-
     if system == "windows":
-        print("Por implementar")
+        # Cancelar el trabajo usando PowerShell
+        try:
+            command = f"powershell Remove-PrintJob -JobId {job_id}"
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error al cancelar el trabajo {job_id}: {e}")
     else:
         conn = cups.Connection()
         try:
             conn.cancelJob(job_id)
         except Exception as e:
-            print(cc(f"Error: {e}", "r"))
+            print(f"Error al cancelar el trabajo {job_id}: {e}")
 
 def cancel_all_jobs():
-
     if system == "windows":
-        print("Por implementar")
+        # Cancelar todos los trabajos de impresión usando PowerShell
+        try:
+            command = "powershell Get-PrintJob | Remove-PrintJob"
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error al cancelar todos los trabajos: {e}")
     else:
         conn = cups.Connection()
         try:
             conn.cancelAllJobs()
         except Exception as e:
-            print(cc(f"Error: {e}", "r"))
+            print(f"Error al cancelar todos los trabajos: {e}")
 
-def move_job_to_first_place(job_id, printer_name):
-
+def add_job(printer_name, file_path, nombre="Trabajo de prueba"):
     if system == "windows":
-        print("Por implementar")
+        # Agregar un trabajo a la cola usando PowerShell
+        try:
+            command = f"powershell Start-Process -FilePath '{file_path}' -ArgumentList '/p', '/h', '/t', '{printer_name}'"
+            subprocess.run(command, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error al agregar el trabajo: {e}")
     else:
         conn = cups.Connection()
-        # Obtener información del trabajo antes de cancelarlo
-        job_info = conn.getJobAttributes(job_id)
-        file_path = job_info['file']
         try:
-            conn.cancelJob(job_id)
-            add_job(printer_name, file_path, f"Trabajo {job_id} reenviado a el principio de la cola")
+            conn.printFile(printer_name, file_path, nombre)
         except Exception as e:
-            print(cc(f"Error: {e}", "r"))
+            print(f"Error al agregar el trabajo: {e}")
+
+def move_job_to_first_place(job_id, printer_name):
+    if system == "windows":
+        print("Mover trabajo no está implementado con subprocess en Windows")
+    else:
+        conn = cups.Connection()
+        try:
+            job_info = conn.getJobAttributes(job_id)
+            file_path = job_info['file']
+            conn.cancelJob(job_id)
+            add_job(printer_name, file_path, f"Trabajo {job_id} reenviado al principio de la cola")
+        except Exception as e:
+            print(f"Error al mover el trabajo {job_id}: {e}")
 
 def manage_job_list_submenu(job_id, mainprinter):
     """ Submenú para trabajar con la cola de impresión """
