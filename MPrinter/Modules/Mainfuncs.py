@@ -7,8 +7,6 @@ import tempfile
 import tkinter as tk
 from tkinter import filedialog
 
-
-
 # Variable global para almacenar la impresora predeterminada
 mainprinter = None 
 
@@ -244,11 +242,20 @@ def list_queue():
         printer_name = win32print.GetDefaultPrinter()
         handle = win32print.OpenPrinter(printer_name)
         jobs = win32print.EnumJobs(handle, 0, 10, 1)
+        
         if len(jobs) == 0:
             return "empty"
         else:
             for job in jobs:
-                print(f"Job ID: {job['JobId']}, Estado: {job['Status']}, Usuario: {job['UserName']}, Documento: {job['pDocument']}")
+                # Usar .get() para evitar KeyError y proporcionar un valor predeterminado
+                job_id = job.get('JobId', 'N/A')
+                status = job.get('Status', 'N/A')
+                user_name = job.get('UserName', 'N/A')
+                document = job.get('pDocument', 'N/A')
+                
+                print(f"Job ID: {job_id}, Estado: {status}, Usuario: {user_name}, Documento: {document}")
+        
+        win32print.ClosePrinter(handle)
     
     else:
         try: 
@@ -268,16 +275,21 @@ def list_queue():
                     print("---" * 40)
 
         except Exception as e:
-            print(cc(f"Error: {e}", "r"))
+            print(f"Error: {e}")
 
+# Función para iniciar un trabajo de impresión
 def start_job(job_id):
     if system == "windows":
-        # Reanudar el trabajo de impresión usando PowerShell
+        printer_name = win32print.GetDefaultPrinter()
+        handle = win32print.OpenPrinter(printer_name)
         try:
-            command = f"powershell Resume-PrintJob -JobId {job_id}"
-            subprocess.run(command, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
+            # Reanudar el trabajo de impresión usando SetJob
+            win32print.SetJob(handle, job_id, 0, None, win32print.JOB_CONTROL_RESUME)
+            print(f"Trabajo {job_id} reanudado correctamente.")
+        except Exception as e:
             print(f"Error al reanudar el trabajo {job_id}: {e}")
+        finally:
+            win32print.ClosePrinter(handle)
     else:
         conn = cups.Connection()
         try:
@@ -285,29 +297,42 @@ def start_job(job_id):
         except Exception as e:
             print(f"Error al reiniciar el trabajo {job_id}: {e}")
 
+# Función para cancelar un trabajo de impresión
 def cancel_job(job_id):
     if system == "windows":
-        # Cancelar el trabajo usando PowerShell
+        printer_name = win32print.GetDefaultPrinter()
+        handle = win32print.OpenPrinter(printer_name)
         try:
-            command = f"powershell Remove-PrintJob -JobId {job_id}"
-            subprocess.run(command, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error al cancelar el trabajo {job_id}: {e}")
+            # Cancelar el trabajo usando SetJob
+            win32print.SetJob(handle, job_id, 0, None, win32print.JOB_CONTROL_CANCEL)
+            print(cc(f"Trabajo {job_id} cancelado correctamente.", "v"))
+        except Exception as e:
+            print(cc(f"Error al cancelar el trabajo {job_id}: {e}","r"))
+        finally:
+            win32print.ClosePrinter(handle)
     else:
         conn = cups.Connection()
         try:
             conn.cancelJob(job_id)
         except Exception as e:
-            print(f"Error al cancelar el trabajo {job_id}: {e}")
+            print(cc(f"Error al cancelar el trabajo {job_id}: {e}","r"))
 
+# Función para cancelar todos los trabajos de impresión
 def cancel_all_jobs():
     if system == "windows":
-        # Cancelar todos los trabajos de impresión usando PowerShell
+        printer_name = win32print.GetDefaultPrinter()
+        handle = win32print.OpenPrinter(printer_name)
         try:
-            command = "powershell Get-PrintJob | Remove-PrintJob"
-            subprocess.run(command, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error al cancelar todos los trabajos: {e}")
+            # Obtener todos los trabajos
+            jobs = win32print.EnumJobs(handle, 0, -1, 1)
+            for job in jobs:
+                # Cancelar cada trabajo
+                win32print.SetJob(handle, job['JobId'], 0, None, win32print.JOB_CONTROL_CANCEL)
+            print(cc("Todos los trabajos cancelados correctamente.", "v"))
+        except Exception as e:
+            print(cc(f"Error al cancelar todos los trabajos: {e}", "r"))
+        finally:
+            win32print.ClosePrinter(handle)
     else:
         conn = cups.Connection()
         try:
@@ -315,14 +340,10 @@ def cancel_all_jobs():
         except Exception as e:
             print(f"Error al cancelar todos los trabajos: {e}")
 
+# Función para agregar un trabajo de impresión
 def add_job(printer_name, file_path, nombre="Trabajo de prueba"):
     if system == "windows":
-        # Agregar un trabajo a la cola usando PowerShell
-        try:
-            command = f"powershell Start-Process -FilePath '{file_path}' -ArgumentList '/p', '/h', '/t', '{printer_name}'"
-            subprocess.run(command, shell=True, check=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error al agregar el trabajo: {e}")
+        print(cc("Función no disponible para Windows", "y"))
     else:
         conn = cups.Connection()
         try:
@@ -330,9 +351,10 @@ def add_job(printer_name, file_path, nombre="Trabajo de prueba"):
         except Exception as e:
             print(f"Error al agregar el trabajo: {e}")
 
+# Función para mover un trabajo al principio de la cola
 def move_job_to_first_place(job_id, printer_name):
     if system == "windows":
-        print("Mover trabajo no está implementado con subprocess en Windows")
+        print(cc("Función no disponible para Windows", "y"))
     else:
         conn = cups.Connection()
         try:
@@ -341,7 +363,7 @@ def move_job_to_first_place(job_id, printer_name):
             conn.cancelJob(job_id)
             add_job(printer_name, file_path, f"Trabajo {job_id} reenviado al principio de la cola")
         except Exception as e:
-            print(f"Error al mover el trabajo {job_id}: {e}")
+            print(cc(f"Error al mover el trabajo {job_id}: {e}", "r"))
 
 def manage_job_list_submenu(job_id, mainprinter):
     """ Submenú para trabajar con la cola de impresión """
@@ -349,7 +371,8 @@ def manage_job_list_submenu(job_id, mainprinter):
     print(cc("1. Reanudar trabajo", color))
     print(cc("2. Cancelar trabajo", color))
     print(cc("3. Cancelar todos los trabajos", color))
-    print(cc("4. Mover trabajo al principio de la cola", color))
+    if system != "windows":
+        print(cc("4. Mover trabajo al principio de la cola", color))
     print(cc("5. Cancelar", color))
 
     option = input(cc("Introduce una opción: ", color))
@@ -380,11 +403,9 @@ def select_archive():
     return archivo
 
 def print_document(defprinter, archivo):
-
     if system == "windows":
-        print(f"Impresora predeterminada: {defprinter}")
 
-        # Enviar el archivo PDF a la impresora utilizando win32api
+        # Enviar el archivo a la impresora utilizando win32api
         win32api.ShellExecute(
             0,
             "print",
@@ -396,4 +417,3 @@ def print_document(defprinter, archivo):
     else:
         # Enviar el archivo PDF a la impresora utilizando lp
         subprocess.run(['lp', '-d', defprinter, archivo], capture_output=True, text=True)
-        print("Archivo enviado a la impresora en Linux.")
