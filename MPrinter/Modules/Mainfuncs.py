@@ -65,6 +65,7 @@ def cc(text, color):
 
 # ------------------------- FUNCIONES BÁSICAS IMPRESORAS -------------------------
 
+# Función para obtener la impresora predeterminada
 def mainprint():
 
     """Obtener impresora principal (solo una vez al inicio)"""
@@ -79,7 +80,9 @@ def mainprint():
 
     return mainprinter
 
+# Función para listas impresoras
 def list_printers():
+    clear()
     """Función para mostrar las impresoras disponibles y permitir su selección."""
     printers_list = []
 
@@ -96,14 +99,18 @@ def list_printers():
             status = printer_info.get('Status', 'Desconocido')
             printers_list.append((printer_name, status))
     else:
-        result = subprocess.run(['lpstat', '-p'], capture_output=True, text=True)
+        # Conectar al servidor de CUPS
+        conn = cups.Connection()
+
+        # Obtener la lista de impresoras
+        printers = conn.getPrinters()
+
         printers_list = []
-        
-        # Obtener el estado de las impresoras en sistemas Unix
-        for line in result.stdout.splitlines():
-            parts = line.split(' ', 1)
-            printer_name = parts[0]
-            status = parts[1] if len(parts) > 1 else 'Desconocido'
+
+        # Obtener el estado de las impresoras
+        for printer in printers:
+            printer_name = printer
+            status = printers[printer].get('printer-state', 'Desconocido')
             printers_list.append((printer_name, status))
     
     # Mostrar la lista de impresoras con su estado
@@ -125,6 +132,7 @@ def list_printers():
         print(cc("Entrada no válida", "r"))
 # ------------------------- FUNCIONES PARA ADMINISTRAR IMPRESORAS -------------------------
 
+# Función para establecer impresora como predeterminada
 def set_default_printer(printer_name):
     """Establece la impresora como predeterminada."""
     try:
@@ -138,6 +146,7 @@ def set_default_printer(printer_name):
     except Exception as e:
         print(cc(f"Error al cambiar la impresora predeterminada: {e}", "r"))
 
+# Función para imprimir una hoja de prueba
 def print_test_page(printer_name):
     """Imprime una página de prueba con un mensaje personalizado."""
     print(f"Imprimiendo página de prueba en '{printer_name}'...")
@@ -161,6 +170,7 @@ def print_test_page(printer_name):
     finally:
         os.remove(test_file)  # Eliminar archivo temporal después de imprimir
 
+# Función para iniciar una impresora pausada
 def start_printer(printer_name):
 
     if system == "windows":
@@ -174,6 +184,7 @@ def start_printer(printer_name):
         except Exception as e:
             print(cc(f"Error: {e}", "r"))
 
+# Función para detener una impresora
 def stop_printer(printer_name):
 
     if system == "windows":
@@ -188,6 +199,7 @@ def stop_printer(printer_name):
         except Exception as e:
             print(cc(f"Error: {e}", "r"))
 
+# Función para eliminar una impresora
 def remove_printer(printer_name):
 
     if system == "windows":
@@ -202,6 +214,7 @@ def remove_printer(printer_name):
         except Exception as e:
             print(cc(f"Error: {e}", "r"))
 
+# Función que muestra y maneja el submenú para la administración de impresoras
 def manage_printers_submenu(printer_name):
     """Menú de administración de la impresora."""
     print(cc("\nOpciones para la impresora seleccionada", color))
@@ -237,6 +250,8 @@ def manage_printers_submenu(printer_name):
         print("Entrada no válida. Por favor, ingrese un número.")
 
 # ------------------------- FUNCIONES PARA COLA DE IMPRESIÓN -------------------------
+
+# Función para mostrar la cola de impresión de una impresora
 def list_queue():
     if system == "windows":
         printer_name = win32print.GetDefaultPrinter()
@@ -294,6 +309,7 @@ def start_job(job_id):
         conn = cups.Connection()
         try:
             conn.restartJob(job_id)
+            print(cc(f"Trabajo {job_id} reanudado correctamente", "v"))
         except Exception as e:
             print(f"Error al reiniciar el trabajo {job_id}: {e}")
 
@@ -314,6 +330,7 @@ def cancel_job(job_id):
         conn = cups.Connection()
         try:
             conn.cancelJob(job_id)
+            print(cc(f"Trabajo {job_id} cancelado correctamente", "v"))
         except Exception as e:
             print(cc(f"Error al cancelar el trabajo {job_id}: {e}","r"))
 
@@ -365,6 +382,7 @@ def move_job_to_first_place(job_id, printer_name):
         except Exception as e:
             print(cc(f"Error al mover el trabajo {job_id}: {e}", "r"))
 
+# Función para mostrar y manejar el menú de la cola de impresión
 def manage_job_list_submenu(job_id, mainprinter):
     """ Submenú para trabajar con la cola de impresión """
     print(cc("\nOpciones para el trabajo seleccionado", color))
@@ -391,6 +409,7 @@ def manage_job_list_submenu(job_id, mainprinter):
         print(cc("Opción no válida", "r"))
 # ------------------------- FUNCIONES PARA IMPRESIÓN DE ARCHIVOS -------------------------
 
+# Función para escoger un archivo de manera gráfica
 def select_archive():
     """Abre un cuadro de diálogo para seleccionar un archivo PDF."""
     root = tk.Tk()
@@ -402,6 +421,7 @@ def select_archive():
     root.destroy()  # Cierra la ventana de selección
     return archivo
 
+# Función para imprimir cualquier documento
 def print_document(defprinter, archivo):
     if system == "windows":
 
