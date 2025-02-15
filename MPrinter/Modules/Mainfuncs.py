@@ -334,64 +334,13 @@ def cancel_job(job_id):
         except Exception as e:
             print(cc(f"Error al cancelar el trabajo {job_id}: {e}","r"))
 
-# Función para cancelar todos los trabajos de impresión
-def cancel_all_jobs():
-    if system == "windows":
-        printer_name = win32print.GetDefaultPrinter()
-        handle = win32print.OpenPrinter(printer_name)
-        try:
-            # Obtener todos los trabajos
-            jobs = win32print.EnumJobs(handle, 0, -1, 1)
-            for job in jobs:
-                # Cancelar cada trabajo
-                win32print.SetJob(handle, job['JobId'], 0, None, win32print.JOB_CONTROL_CANCEL)
-            print(cc("Todos los trabajos cancelados correctamente.", "v"))
-        except Exception as e:
-            print(cc(f"Error al cancelar todos los trabajos: {e}", "r"))
-        finally:
-            win32print.ClosePrinter(handle)
-    else:
-        conn = cups.Connection()
-        try:
-            conn.cancelAllJobs()
-        except Exception as e:
-            print(f"Error al cancelar todos los trabajos: {e}")
-
-# Función para agregar un trabajo de impresión
-def add_job(printer_name, file_path, nombre="Trabajo de prueba"):
-    if system == "windows":
-        print(cc("Función no disponible para Windows", "y"))
-    else:
-        conn = cups.Connection()
-        try:
-            conn.printFile(printer_name, file_path, nombre)
-        except Exception as e:
-            print(f"Error al agregar el trabajo: {e}")
-
-# Función para mover un trabajo al principio de la cola
-def move_job_to_first_place(job_id, printer_name):
-    if system == "windows":
-        print(cc("Función no disponible para Windows", "y"))
-    else:
-        conn = cups.Connection()
-        try:
-            job_info = conn.getJobAttributes(job_id)
-            file_path = job_info['file']
-            conn.cancelJob(job_id)
-            add_job(printer_name, file_path, f"Trabajo {job_id} reenviado al principio de la cola")
-        except Exception as e:
-            print(cc(f"Error al mover el trabajo {job_id}: {e}", "r"))
-
 # Función para mostrar y manejar el menú de la cola de impresión
-def manage_job_list_submenu(job_id, mainprinter):
+def manage_job_list_submenu(job_id):
     """ Submenú para trabajar con la cola de impresión """
     print(cc("\nOpciones para el trabajo seleccionado", color))
     print(cc("1. Reanudar trabajo", color))
     print(cc("2. Cancelar trabajo", color))
-    print(cc("3. Cancelar todos los trabajos", color))
-    if system != "windows":
-        print(cc("4. Mover trabajo al principio de la cola", color))
-    print(cc("5. Cancelar", color))
+    print(cc("3. Cancelar", color))
 
     option = input(cc("Introduce una opción: ", color))
 
@@ -400,13 +349,10 @@ def manage_job_list_submenu(job_id, mainprinter):
     elif option == "2":
         cancel_job(job_id)
     elif option == "3":
-        cancel_all_jobs()
-    elif option == "4":
-        move_job_to_first_place(job_id, mainprinter)
-    elif option == "5":
         return
     else:
         print(cc("Opción no válida", "r"))
+        
 # ------------------------- FUNCIONES PARA IMPRESIÓN DE ARCHIVOS -------------------------
 
 # Función para escoger un archivo de manera gráfica
@@ -434,6 +380,8 @@ def print_document(defprinter, archivo):
             ".",
             0
         )
+        print(cc("Archivo enviado a imprimir correctamente","v"))
     else:
         # Enviar el archivo PDF a la impresora utilizando lp
         subprocess.run(['lp', '-d', defprinter, archivo], capture_output=True, text=True)
+        print(cc("Archivo enviado a imprimir correctamente","v"))
